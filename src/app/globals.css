@@ -59,8 +59,9 @@ body {
   display: grid;
   grid-template-columns: repeat(3,1fr);
   justify-items: center;
+  padding: 3vw;
   /* height: 100%; */
-  gap: 1rem;
+  gap: 3vw;
 }
 
 select{
