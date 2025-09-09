@@ -2,6 +2,12 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useWebSocket } from "./hooks/useWebSocket"
+import Link from "next/link"
+import { GenerateVideoHandler } from "./VideoHandler"
+import { Config } from "@/config.ts"
+import { NetworkTypesProofs } from "./sharedTypes/proofs"
+
+const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
 
 export const VideoViewer: React.FC<{
   folder: string, 
@@ -15,16 +21,34 @@ export const VideoViewer: React.FC<{
 
   const [isPlaying, setIsPlaying] = useState(false)
 
+  const [socketURL,setSocketURL] = useState('')
+
+  const [lobbyId,setLobbyId] = useState('')
+
+  useEffect(()=>{
+
+    setSocketURL(`ws://${window.location.hostname}:${Config.WebSocketServerPort}`)
+  })
+
   const [
     webSocket,
     socketData,
     resetSocket,
     socketState
-  ] = useWebSocket('ws://localhost:8080')
+  ] = useWebSocket(socketURL)
+
+  console.log(webSocket)
 
   useEffect(()=>{
+
+    console.log(socketData)
     try {
       const wsObject = JSON.parse(socketData)
+
+      if (NetworkTypesProofs.LobbyCreated(wsObject)){
+
+        setLobbyId(wsObject.lobbyId)
+      }
 
     } catch (error) {
       
@@ -45,6 +69,18 @@ export const VideoViewer: React.FC<{
         flexDirection: 'column',
         gap: '1rem'
       }}> 
+      <div>
+        <Link 
+          style={{
+            textDecoration: 'none',
+            color: 'cyan',
+            fontSize: '3rem'
+          }}
+          href={'/'}>
+          Home
+        </Link>
+        <p>Lobby Id: {lobbyId}</p>
+      </div>
       <video 
         ref={videoRef}
         style={{
@@ -62,47 +98,16 @@ export const VideoViewer: React.FC<{
       </video>
 
       <div>
-        <button
-          onClick={()=>{
-
-            if (!videoRef.current){
-
-              return;
-            }
-
-            if (isPlaying) {
-
-              videoRef.current.pause();
-              setIsPlaying(false);
-              
-              return;
-            }
-
-            videoRef.current.play();
-            setIsPlaying(true)
-
-          }}>Pause/Play</button>
-
-        <button
-          onClick={()=>{
-
-            if (!videoRef.current){
-
-              return;
-            }
-
-            videoRef.current.requestFullscreen();
-
-          }}>Fullscreen</button>
+        
       </div>
 
       <button
         onClick={()=>{
 
-          webSocket.send(JSON.stringify({
+          webSocket?.send(JSON.stringify({
             message: 'CreateVideoWatchTogetherLobby'
           } satisfies NetworkTypes.CreateLobby))
-        }}>Send Play Request</button>
+        }}>Request Lobby Creation</button>
 
       <p>socketData: {socketData}</p>
 
