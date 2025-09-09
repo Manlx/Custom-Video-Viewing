@@ -1,6 +1,6 @@
 import { WebSocket } from 'ws';
 import crypto from "crypto";
-import { NetworkTypesProofs } from './app/sharedTypes/proofs';
+import { NetworkTypesProofs } from './app/sharedTypes/proofs.ts';
 
 export class LobbyManager{
 
