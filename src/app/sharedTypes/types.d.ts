@@ -93,3 +93,9 @@ type UnionToIntersection<U> = (
   : never;
 
 type RecursiveObject = {[key in string | number]: RecursiveObject | number | string | boolean | undefined | null | symbol }
+
+type GenerateVideoHandlerType = typeof import ('../VideoHandler.ts').GenerateVideoHandler;
+
+type VideoControlsFunctionsType = ReturnType<GenerateVideoHandlerType>;
+
+type VideoControlOptions = keyof VideoControlsFunctionsType;
