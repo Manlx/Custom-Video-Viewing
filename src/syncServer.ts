@@ -1,10 +1,10 @@
 import { WebSocketServer } from 'ws';
 import { NetworkTypesProofs } from './app/sharedTypes/proofs.ts';
-
-const PORT = 8080;
+import { LobbyManager } from './lobbyManager.ts';
+import { Config } from './config.ts';
 
 const wss = new WebSocketServer({
-  port: PORT,
+  port: Config.WebSocketServerPort,
   perMessageDeflate: {
     zlibDeflateOptions: {
       // See zlib defaults.
@@ -26,7 +26,7 @@ const wss = new WebSocketServer({
   }
 }, () => {
 
-  console.log(`listening on: ws://localhost:${PORT}`)
+  console.log(`listening on: ws://localhost:${Config.WebSocketServerPort}`)
 });
 
 const Lobbies: {
@@ -35,28 +35,5 @@ const Lobbies: {
 
 wss.addListener('connection', (wsClient, req) => {
 
-  wsClient.on('message',(data,isBinary)=>{
-
-    try {
-      const dataObj = JSON.parse(data.toString());
-
-      if (NetworkTypesProofs.CreateLobby(dataObj)){
-
-        console.log('Creating Lobby: ', dataObj.lobbyId)
-      }
-
-    } catch (error) {
-      
-      return;
-    }
-  })
-
-  wsClient.on('open', ()=>{
-
-    console.log('Opened socket client')
-
-    wsClient.send(JSON.stringify({
-      message: "Hello from server"
-    }))
-  })
+  LobbyManager.AddNewConnection(wsClient)
 })
