@@ -5,17 +5,33 @@ type socketState = 'Closed' | 'Open'
 type SocketMessageEvent = MessageEvent<string>
 
 type useWebSocketReturn = [
-  webSocket: WebSocket,
+  webSocket: WebSocket | null,
   socketData: string,
   resetSocket: () => void,
   socketState: socketState
 ]
 
+function isValidWebSocketUrl(url: string) {
+  try {
+    const parsedUrl = new URL(url);
+    // Check if the protocol is 'ws:' for insecure or 'wss:' for secure WebSockets
+    return parsedUrl.protocol === 'ws:' || parsedUrl.protocol === 'wss:';
+  } catch (error) {
+    // The URL constructor throws an error for invalid URL formats
+    return false;
+  }
+}
+
 export const useWebSocket = (socketURL: string): useWebSocketReturn => {
 
-  const [websocket, setWebSocket] = useState(() => {
+  const [websocket, setWebSocket] = useState<WebSocket | null>(() => {
 
-    return new WebSocket(socketURL)
+    if (isValidWebSocketUrl(socketURL)){
+
+      return new WebSocket(socketURL)
+    }
+    return null
+
   });
 
   const [
@@ -32,9 +48,9 @@ export const useWebSocket = (socketURL: string): useWebSocketReturn => {
 
     const onMessage: (this: WebSocket, ev: SocketMessageEvent) => void = function (data){
     
-      if (typeof data === 'string') {
+      if (typeof data.data === 'string') {
 
-        setSocketData(data)
+        setSocketData(data.data)
       }
     }
 
@@ -48,15 +64,15 @@ export const useWebSocket = (socketURL: string): useWebSocketReturn => {
       setSocketState('Open')
     }
 
-    websocket.addEventListener('message', onMessage)
+    websocket?.addEventListener('message', onMessage)
 
-    websocket.addEventListener('close',onClose)
+    websocket?.addEventListener('close',onClose)
 
-    websocket.addEventListener('open', onOpen)
+    websocket?.addEventListener('open', onOpen)
 
     return () => {
 
-      websocket.removeEventListener('message', onMessage)
+      websocket?.removeEventListener('message', onMessage)
     }
   },[
     websocket
