@@ -18,7 +18,7 @@ export const GenerateObjectTypeProof = <ProvenType extends RecursiveObject> (exa
 
       try {
         data = JSON.parse(data)
-      } catch (error) {
+      } catch {
         
         return false;
       }
@@ -59,27 +59,42 @@ export const GenerateObjectTypeProof = <ProvenType extends RecursiveObject> (exa
 
 }
 
+const WebSocketMessageProof = ((data) => {
+
+  const NetworkTypesProofsKeys = (Object.keys(NetworkTypesProofs) as (keyof NetworkTypes.NetworkTypesProof)[]).filter(key => key !== 'WebSocketMessages') 
+
+  return NetworkTypesProofsKeys.some(key => NetworkTypesProofs[key](data))
+}) as ((data: unknown) => data is NetworkTypes.WebSocketMessages)
+
 export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
   PauseVideoRequest: GenerateObjectTypeProof<NetworkTypes.PauseVideoRequest>({
-    message: 'string'
+    type: 'string',
   }),
   PlayVideoRequest: GenerateObjectTypeProof<NetworkTypes.PlayVideoRequest>({
-    message: 'string'
+    type: 'string',
   }),
   CreateLobby: GenerateObjectTypeProof<NetworkTypes.CreateLobby>({
-    message: 'string'
+    type: 'string',
   }),
   ResumeInstructionFromServer: GenerateObjectTypeProof<NetworkTypes.ResumeInstructionFromServer>({
-    message: 'string'
+    type: 'string'
   }),
   LobbyCreated: GenerateObjectTypeProof<NetworkTypes.LobbyCreated>({
-    message: 'string',
+    type: 'string',
     lobbyId: 'string'
   }),
   LobbyState: GenerateObjectTypeProof<NetworkTypes.LobbyState>({
-    message: 'string',
-    lobbyState: {
-      isPlaying: 'boolean'
+    type: 'string',
+      lobbyState: {
+        isPlaying: 'boolean'
     }
   }),
+  JoinLobby: GenerateObjectTypeProof<NetworkTypes.JoinLobby>({
+    lobbyId: 'string',
+    type: 'string'
+  }),
+  GetLobbyState: GenerateObjectTypeProof<NetworkTypes.GetLobbyState>({
+    type: 'string'
+  }),
+  WebSocketMessages: WebSocketMessageProof
 }
