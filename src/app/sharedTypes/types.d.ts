@@ -1,47 +1,76 @@
 declare namespace NetworkTypes {
 
   type PauseVideoRequest = {
-    message: 'PauseVideoPlease'
+    type: 'PauseVideoRequest'
   }
 
   type PlayVideoRequest = {
-    message: 'PlayVideoPlease'
+    type: 'PlayVideoRequest'
   }
 
   type CreateLobby = {
-    message: 'CreateVideoWatchTogetherLobby',
+    type: 'CreateLobby'
+  }
+
+  type JoinLobby = {
+    type: 'JoinLobby'
+    lobbyId: string
+  }
+
+  type LobbyJoinOutcome = {
+    type: 'LobbyJoinOutcome'
+    outcome: 'Accepted'|'Rejected: Lobby Not Found' | 'Rejected: Lobby is full'
+  }
+
+  type LobbySync = {
+    type: 'LobbySync'
+    lobbyId: 'Accepted'|'Rejected: Lobby Not Found' | 'Rejected: Lobby is full'
   }
 
   type LobbyCreated = {
-    message: 'YourLobbyHasBeenCreated',
+    type: 'LobbyCreated'
     lobbyId: string
   }
 
   type GetLobbyState = {
-    message: 'MayIHaveTheCurrentLobbyState',
+    type: 'GetLobbyState'
   }
 
   type LobbyState = {
-    message: 'YesYouMayHaveTheLobbyStateHereItIs',
+    type: 'LobbyState'
     lobbyState: {
       isPlaying: boolean
     }
   }
 
   type ResumeInstructionFromServer = {
-    message: 'YouMustResumeTheVideoNow',
+    type: 'ResumeInstructionFromServer'
   }
 
-  type WebSocketMessages = CreateLobby | PlayVideoRequest | PauseVideoRequest | LobbyCreated | ResumeInstructionFromServer | LobbyState
+  type WebSocketMessages = PauseVideoRequest | PlayVideoRequest | CreateLobby | JoinLobby | LobbyCreated | GetLobbyState | LobbyState | ResumeInstructionFromServer
+
+  type MessageEvent<T extends WebSocketMessages> = T & {
+    eventFunction: (context: Omit<MessageEvent<T>, 'eventFunction'>, self: import('ws').WebSocket) => void
+    eventName: `${T['type']}`
+  }
+
+  type PauseVideoRequestEvent =  MessageEvent<PauseVideoRequest>
+  type PlayVideoRequestEvent =  MessageEvent<PlayVideoRequest>
+  type CreateLobbyEvent =  MessageEvent<CreateLobby>
+  type JoinLobbyEvent =  MessageEvent<JoinLobby>
+  type LobbyJoinOutcomeEvent =  MessageEvent<LobbyJoinOutcome>
+  type LobbySyncEvent =  MessageEvent<LobbySync>
+  type LobbyCreatedEvent =  MessageEvent<LobbyCreated>
+  type GetLobbyStateEvent =  MessageEvent<GetLobbyState>
+  type LobbyStateEvent =  MessageEvent<LobbyState>
+  type ResumeInstructionFromServerEvent =  MessageEvent<ResumeInstructionFromServer>
+
+  type WebSocketMessageEvents = PauseVideoRequestEvent | PlayVideoRequestEvent | CreateLobbyEvent | JoinLobbyEvent | LobbyJoinOutcomeEvent | LobbySyncEvent | LobbyCreatedEvent | GetLobbyStateEvent | LobbyStateEvent | ResumeInstructionFromServerEvent
 
   type NetworkTypesProof = {
-    PlayVideoRequest: (data: unknown) => data is PlayVideoRequest
-    PauseVideoRequest: (data: unknown) => data is PauseVideoRequest
-    CreateLobby: (data: unknown) => data is CreateLobby
-    ResumeInstructionFromServer: (data: unknown) => data is ResumeInstructionFromServer,
-    LobbyCreated: (data: unknown) => data is LobbyCreated,
-    LobbyState: (data: unknown) => data is LobbyState,
-    
+    [key in WebSocketMessages as `${key['type']}`]: (data: unknown) => data is key
+  } & {
+    'WebSocketMessages':(data: unknown) => data is WebSocketMessages
   }
 
   type NetworkClientProfile = {
@@ -56,7 +85,7 @@ type stringTypeOf<T> =  T extends string
  ? Extract<typeOfReturn, 'string'>
  : T extends undefined
  ? Extract<typeOfReturn, 'undefined'>
- : T extends Function
+ : T extends (...args: unknown[]) => unknown
  ? Extract<typeOfReturn, 'function'>
  : T extends number
  ? Extract<typeOfReturn, 'number'>
@@ -80,14 +109,14 @@ type UnionToTuple<U, Last = LastInUnion<U>> = [U] extends [never]
 
 // Helper to extract one element from the union (its order is not guaranteed)
 type LastInUnion<U> = UnionToIntersection<
-  U extends any ? (x: U) => void : never
+  U extends unknown ? (x: U) => void : never
 > extends (x: infer L) => void
   ? L
   : never;
 
 // Helper to convert a union of functions to an intersection of functions
 type UnionToIntersection<U> = (
-  U extends any ? (k: U) => void : never
+  U extends unknown ? (k: U) => void : never
 ) extends (k: infer I) => void
   ? I
   : never;
