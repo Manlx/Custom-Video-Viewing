@@ -1,6 +1,6 @@
 "use client"
-import { useState } from "react";
-import { useRouter } from 'next/navigation';
+import { useEffect, useState } from "react";
+import { useRouter,useSearchParams  } from 'next/navigation';
 
 type VideoPaginatorProps = {
   pages: {
@@ -41,23 +41,46 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
   paginationSize: paginationSizeInitial = 6
 }) => {
 
-  // const [currentTab, setCurrentTab] = useState(pages[0])
-
+  const searchParams = useSearchParams();
+  
   const router = useRouter()
 
-  const [currentTabIndex, setCurrentTabIndex] = useState(0)
+  const 
+    currentTabIndexQueryParam = Number(searchParams.get('currentTabIndex')), 
+    currentSubPageQueryParam = Number(searchParams.get('currentSubPage'))
+    // paginationSizeQueryParam = Number(searchParams.get('paginationSize'))
 
-  const [currentSubPage, setCurrentSubPage] = useState(0);
+  const [currentTabIndex, setCurrentTabIndex] = useState(() => isNaN (currentTabIndexQueryParam)?  0 : currentTabIndexQueryParam)
+
+  const [currentSubPage, setCurrentSubPage] = useState(() => isNaN(currentSubPageQueryParam) ? 0 : currentSubPageQueryParam);
+  
+  // const [paginationSize, setPaginationSize] = useState(() => isNaN(paginationSizeQueryParam) ? 4 : paginationSizeQueryParam);
+
+  const [currentVideos, setCurrentVideos] = useState<string[]>([]);
+  
+  // const [currentTabIndex, setCurrentTabIndex] = useState(0)
+
+  // const [currentSubPage, setCurrentSubPage] = useState(0);
 
   const [paginationSize, setPaginationSize] = useState(paginationSizeInitial);
+
+  useEffect(()=>{
+    router.push(`/?currentTabIndex=${currentTabIndex}&currentSubPage=${currentSubPage}`)
+    setCurrentVideos(pages[currentTabIndex].videos.slice(currentSubPage * paginationSize, (currentSubPage + 1) * paginationSize ))
+  },[
+    currentTabIndex,
+    currentSubPage,
+    paginationSize,
+    // pages,
+    // router
+  ])
 
   return (
     <div
       style={{
         display: 'flex',
-        justifyContent: 'center',
         alignItems: 'center',
-        height: '100vh',
+        minHeight: '100vh',
         flexDirection: 'column',
         gap: '2rem'
       }}>
@@ -75,8 +98,9 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
         }}>
         <label>Game: </label>
         <select
+          value={currentTabIndex}
           onChange={ e => setCurrentTabIndex(Number(e.target.value)) }>
-
+          
           { pages.map((page, index) => (
 
               <option 
@@ -116,13 +140,14 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
         justifyContent: 'center',
         alignItems: 'center',
         flexDirection: 'column',
-        height: '100%'
+        height: '100%',
+        flex: 1
       }}>
 
         <div
           className="videoContainer">
           {
-            pages[currentTabIndex].videos.slice(currentSubPage * paginationSize, (currentSubPage + 1) * paginationSize ).map(video => (
+            currentVideos.map(video => (
 
               <video 
                 className="videoFromPicker"
