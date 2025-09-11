@@ -12,12 +12,14 @@ type useWebSocketReturn = [
 ]
 
 function isValidWebSocketUrl(url: string) {
+  
   try {
     const parsedUrl = new URL(url);
-    // Check if the protocol is 'ws:' for insecure or 'wss:' for secure WebSockets
+
     return parsedUrl.protocol === 'ws:' || parsedUrl.protocol === 'wss:';
-  } catch (error) {
-    // The URL constructor throws an error for invalid URL formats
+
+  } catch {
+    
     return false;
   }
 }
