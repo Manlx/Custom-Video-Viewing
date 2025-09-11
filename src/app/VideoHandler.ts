@@ -19,7 +19,13 @@ export const GenerateVideoHandler = (ref: React.RefObject<HTMLVideoElement | nul
       ref.current?.pause()
     },
     TogglePlay: () => {
-      ref.current?.played ? ref.current.pause() : ref.current?.play()
+      if (ref.current?.played) {
+
+        ref.current.pause()
+
+        return;
+      } 
+      ref.current?.play()
     },
     SkipForwardSeconds5S: SkipGenerator(ref, 5),
     SkipForwardSeconds15S: SkipGenerator(ref, 15),
