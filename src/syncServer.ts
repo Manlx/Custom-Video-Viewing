@@ -1,5 +1,4 @@
 import { WebSocketServer } from 'ws';
-import { NetworkTypesProofs } from './app/sharedTypes/proofs.ts';
 import { LobbyManager } from './lobbyManager.ts';
 import { Config } from './config.ts';
 
@@ -29,11 +28,7 @@ const wss = new WebSocketServer({
   console.log(`listening on: ws://localhost:${Config.WebSocketServerPort}`)
 });
 
-const Lobbies: {
-  [key: number]: NetworkTypes.NetworkClientProfile[]
-} = {}
-
-wss.addListener('connection', (wsClient, req) => {
+wss.addListener('connection', (wsClient) => {
 
   LobbyManager.AddNewConnection(wsClient)
 })
