@@ -10,26 +10,48 @@ export class LobbyManager{
 
   static Lobbies: {[key: string]: Lobby} = {}
 
-  static OnMessage: ((this: WebSocket, data: WebSocket.RawData, isBinary: boolean) => void) = function(data: WebSocket.RawData, isBinary: boolean){
+  static OnMessage: ((this: WebSocket, data: WebSocket.RawData, isBinary: boolean) => void) = function(data: WebSocket.RawData){
+
+    const dataString = data.toString();
+
+    if (!dataString) {
+
+      return;
+    }
 
     try {
-      const dataObj = JSON.parse(data.toString())
 
-      if (!NetworkTypesProofs.CreateLobby(dataObj)) {
+      const dataObj = JSON.parse(dataString)
+
+      if (NetworkTypesProofs.CreateLobby(dataObj)) {
+
+        const lobbyId = crypto.randomUUID();
+  
+        LobbyManager.Lobbies[lobbyId] = new Lobby();
+  
+        LobbyManager.Lobbies[lobbyId].connectNew(this, true)
+  
+        this.send(JSON.stringify({
+          type: 'LobbyCreated',
+          lobbyId
+        } satisfies NetworkTypes.LobbyCreated))
 
         return;
       }
 
-      const lobbyId = crypto.randomUUID();
+      if (NetworkTypesProofs.JoinLobby(dataObj)) {
 
-      LobbyManager.Lobbies[lobbyId] = new Lobby();
+        const lobby = LobbyManager.Lobbies[dataObj.lobbyId];
 
-      LobbyManager.Lobbies[lobbyId].connectNew(this)
+        if (!lobby) {
 
-      this.send(JSON.stringify({
-        message: 'YourLobbyHasBeenCreated',
-        lobbyId
-      } satisfies NetworkTypes.LobbyCreated))
+          this.send(JSON.stringify({
+            outcome: 'Rejected: Lobby Not Found',
+            type: 'LobbyJoinOutcome'
+          } satisfies NetworkTypes.LobbyJoinOutcome))
+        }
+      }
+
 
     } catch (error) {
      
@@ -46,7 +68,21 @@ export class LobbyManager{
 
 export class Lobby{
 
+  static ConnectionRemoverGenerator(lobby: Lobby): (this: WebSocket, code: number, reason: Buffer) => void {
+
+    return function(){
+
+      const removeIndex = lobby.connections.findIndex((connection) => connection === this)
+
+      lobby.connections = lobby.connections.slice(0, removeIndex).concat(lobby.connections.slice(removeIndex + 1))
+
+      this.removeEventListener('message', lobby.messageHandler)
+    }
+  }
+
   connections: WebSocket[] = [];
+
+  lobbyLeader: WebSocket | undefined = undefined;
 
   messageHandler: ((event: WebSocket.MessageEvent) => void) = function(messageEvent: WebSocket.MessageEvent) {
 
@@ -65,36 +101,24 @@ export class Lobby{
       }
     } catch (error) {
       
+      console.error(error)
     }
 
-  }
-
-  static ConnectionRemoverGenerator(lobby: Lobby): (this: WebSocket, code: number, reason: Buffer) => void {
-
-    return function(code, reason){
-
-      const removeIndex = lobby.connections.findIndex((connection) => connection === this)
-
-      lobby.connections = lobby.connections.slice(0, removeIndex).concat(lobby.connections.slice(removeIndex + 1))
-
-      this.removeEventListener('message', lobby.messageHandler)
-    }
   }
 
   connectionDrop: (this: WebSocket, code: number, reason: Buffer) => void = Lobby.ConnectionRemoverGenerator(this)
 
-  connectNew(newConnection: WebSocket) {
+  connectNew(newConnection: WebSocket, isLobbyLeader: boolean) {
 
     this.connections.push(newConnection)
+
+    if (isLobbyLeader) {
+
+      this.lobbyLeader = newConnection;
+    }
 
     newConnection.addEventListener('message', this.messageHandler)
 
     newConnection.on('close', this.connectionDrop)
-  }
-
-  currentLobbyState: {
-    isPlaying: boolean
-  } = {
-    isPlaying: false
   }
 }
