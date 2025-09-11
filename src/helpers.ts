@@ -10,17 +10,22 @@ export const GetAllVideoPerFolder = (folder: string, source: string ) => {
   return execSync(`cd ${folder} &&  dir /A-D /S /B`, {encoding :'utf8'}).split('\r\n').filter(line => line.endsWith('.mp4')).map(line => line.replaceAll('\\','/').replace(source, '')).filter(line => !line.includes('replay_cache'))
 }
 
+let pages:{
+  pageName: string,
+  videos: string[]
+}[]  = []
+
 export const GetPagesAndVideos = (source: string) => {
 
   const dirs: string[] = execSync('cd public && dir /AD /B', {encoding: 'utf8'}).split('\r\n').filter(folder => folder.length > 0).filter(line => !line.includes('replay_cache'))
 
-  const pages:{
-    pageName: string,
-    videos: string[]
-  }[] = dirs.map(dir => ({
-    pageName: dir,
-    videos: GetAllVideoPerFolder(`./public/${dir}`,source)
-  }))
+  if (pages.length === 0) {
+    
+    pages = dirs.map(dir => ({
+      pageName: dir,
+      videos: GetAllVideoPerFolder(`./public/${dir}`,source)
+    }))
+  }
 
   return pages;
 }
