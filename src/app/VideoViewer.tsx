@@ -1,13 +1,24 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import { useWebSocket } from "./hooks/useWebSocket"
-import Link from "next/link"
-import { GenerateVideoHandler } from "./VideoHandler"
-import { Config } from "@/config.ts"
+import { Config } from "./../config.ts"
 import { NetworkTypesProofs } from "./sharedTypes/proofs"
+import { useRouter } from 'next/navigation';
 
-const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
+// ToDo network sided buttons for host.
+// const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
+
+const linkStyle: React.CSSProperties = {
+  display: 'flex',
+  justifyContent: 'center',
+  alignItems: 'center',
+  minHeight: '100%',
+  flexDirection: 'column',
+  gap: '1rem',
+  cursor: 'default',
+  caretColor: 'transparent'
+}
 
 export const VideoViewer: React.FC<{
   folder: string, 
@@ -17,9 +28,9 @@ export const VideoViewer: React.FC<{
   videoName
 }) => {
 
-  const videoRef = useRef<HTMLVideoElement | null>(null)
+  const router = useRouter()
 
-  const [isPlaying, setIsPlaying] = useState(false)
+  const videoRef = useRef<HTMLVideoElement | null>(null)
 
   const [socketURL,setSocketURL] = useState('')
 
@@ -28,7 +39,7 @@ export const VideoViewer: React.FC<{
   useEffect(()=>{
 
     setSocketURL(`ws://${window.location.hostname}:${Config.WebSocketServerPort}`)
-  })
+  },[])
 
   const [
     webSocket,
@@ -41,7 +52,11 @@ export const VideoViewer: React.FC<{
 
   useEffect(()=>{
 
-    console.log(socketData)
+    if (!socketData) {
+
+      return;
+    }
+
     try {
       const wsObject = JSON.parse(socketData)
 
@@ -52,6 +67,7 @@ export const VideoViewer: React.FC<{
 
     } catch (error) {
       
+      console.error(error)
     }
 
   },[
@@ -65,23 +81,26 @@ export const VideoViewer: React.FC<{
         justifyContent: 'center',
         alignItems: 'center',
         minHeight: '100%',
-        height: '100%',
         flexDirection: 'column',
         gap: '1rem'
       }}> 
-      <div>
-        <Link 
-          style={{
-            textDecoration: 'none',
-            color: 'cyan',
-            fontSize: '3rem'
-          }}
-          href={'/'}>
-          Home
-        </Link>
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          alignItems: 'center',
+          gap: '3rem'
+        }}>
+        <h1
+          style={linkStyle}
+         onClick={() => router.back()}>Back</h1>
+        <h1
+          style={linkStyle}
+         onClick={() => router.push('/')}>Home</h1>
         <p>Lobby Id: {lobbyId}</p>
       </div>
-      <video 
+      <video
+        controls
         ref={videoRef}
         style={{
           height: '70vh',
@@ -101,13 +120,33 @@ export const VideoViewer: React.FC<{
         
       </div>
 
-      <button
-        onClick={()=>{
+      <span>
 
-          webSocket?.send(JSON.stringify({
-            message: 'CreateVideoWatchTogetherLobby'
-          } satisfies NetworkTypes.CreateLobby))
-        }}>Request Lobby Creation</button>
+        <button
+          onClick={()=>{
+
+            webSocket?.send(JSON.stringify({
+              type: 'CreateLobby'
+            } satisfies NetworkTypes.CreateLobby))
+          }}>Request Lobby Creation</button>
+
+        <button
+          onClick={()=>{
+
+            const lobbyId = prompt('Lobby Id: ')
+
+            if (!lobbyId) {
+
+              alert('No lobby id provided')
+              
+              return;
+            }
+            webSocket?.send(JSON.stringify({
+              type: 'JoinLobby',
+              lobbyId: lobbyId
+            } satisfies NetworkTypes.JoinLobby))
+          }}>Request Join Lobby</button>
+      </span>
 
       <p>socketData: {socketData}</p>
 
