@@ -1,15 +1,13 @@
+import { NetworkHandler } from "@/NetworkHandler";
 import { useEffect, useState } from "react"
 
 type socketState = 'Closed' | 'Open'
 
-type SocketMessageEvent = MessageEvent<string>
-
-type useWebSocketReturn = [
+export type useWebSocketReturn = {
   webSocket: WebSocket | null,
-  socketData: string,
   resetSocket: () => void,
   socketState: socketState
-]
+}
 
 function isValidWebSocketUrl(url: string) {
   
@@ -24,7 +22,7 @@ function isValidWebSocketUrl(url: string) {
   }
 }
 
-export const useWebSocket = (socketURL: string): useWebSocketReturn => {
+export const useWebSocket = (socketURL: string, events: NetworkTypes.HandleWebSocketEventObject): useWebSocketReturn => {
 
   const [websocket, setWebSocket] = useState<WebSocket | null>(() => {
 
@@ -32,61 +30,62 @@ export const useWebSocket = (socketURL: string): useWebSocketReturn => {
 
       return new WebSocket(socketURL)
     }
+
     return null
 
   });
 
-  const [
-    socketData,
-    setSocketData
-  ] = useState('')
+  const [selfState, setSelfState] = useState<useWebSocketReturn>({
+    webSocket: websocket,
+    resetSocket: () => {
 
-  const [
-    socketState,
-    setSocketState
-  ] = useState<socketState>('Closed')
+      setWebSocket(new WebSocket(socketURL))
+    },
+    socketState: 'Closed'
+  }) 
+
+  useEffect(()=>{
+    setSelfState(prev => ({...prev, resetSocket: () => {
+      setWebSocket(new WebSocket(socketURL))
+    }}))
+  },[socketURL])
 
   useEffect(()=>{
 
-    const onMessage: (this: WebSocket, ev: SocketMessageEvent) => void = function (data){
-    
-      if (typeof data.data === 'string') {
+    if (!websocket){
 
-        setSocketData(data.data)
-      }
+      return;
     }
+    
+    const webSocketCleanup = NetworkHandler.handleWebSocket(websocket, events)
 
     const onClose: (this: WebSocket, ev: CloseEvent) => void = function (){
     
-      setSocketState('Closed')
+      setSelfState(prev => ({...prev, socketState: 'Closed'}))
     }
 
     const onOpen: (this: WebSocket, ev: Event) => void = function (){
     
-      setSocketState('Open')
+      setSelfState(prev => ({...prev, socketState: 'Open'}))
     }
-
-    websocket?.addEventListener('message', onMessage)
-
-    websocket?.addEventListener('close',onClose)
-
-    websocket?.addEventListener('open', onOpen)
+    
+      websocket.addEventListener('close', onClose)
+      websocket.addEventListener('open', onOpen)
 
     return () => {
 
-      websocket?.removeEventListener('message', onMessage)
+      websocket.removeEventListener('close', onClose)
+      websocket.removeEventListener('open', onOpen)
+
+      if (webSocketCleanup){
+        
+        webSocketCleanup()
+      }
     }
   },[
-    websocket
+    websocket,
+    events
   ])
 
-  return [
-    websocket,
-    socketData,
-    () => {
-
-      setWebSocket(new WebSocket(socketURL))
-    },
-    socketState
-  ] as const
+  return selfState
 }
