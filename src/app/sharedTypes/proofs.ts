@@ -86,8 +86,9 @@ export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
     messageType: 'string',
     hostCurrentState: {
       currentVideoTime: 'number',
-      isPlaying: 'boolean',
-      playBackSpeed: 'number'
+      paused: 'boolean',
+      playBackSpeed: 'number',
+      currentSrc: 'string'
     }
   }),
   RequestSync: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['RequestSync']>({
@@ -96,7 +97,8 @@ export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
   HostLobbySyncResponse: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']>({
     hostCurrentState: {
       currentVideoTime: 'number',
-      isPlaying: 'boolean',
+      paused: 'boolean',
+      currentSrc: 'string',
       playBackSpeed: 'number'
     },
     messageType: 'string'
