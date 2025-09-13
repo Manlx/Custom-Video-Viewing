@@ -1,81 +1,74 @@
 declare namespace NetworkTypes {
 
-  type PauseVideoRequest = {
-    type: 'PauseVideoRequest'
+  type HostCurrentState = {
+    playBackSpeed: number
+    currentVideoTime: number
+    currentSrc: string
+    paused: boolean
   }
+  
+  type WebSocketMessagesObject = {
 
-  type PlayVideoRequest = {
-    type: 'PlayVideoRequest'
-  }
+    CreateLobby: {
+      messageType: 'CreateLobby'
+    }
+  
+    JoinLobby: {
+      messageType: 'JoinLobby'
+      lobbyId: string
+    }
+  
+    LobbyJoinOutcome: {
+      messageType: 'LobbyJoinOutcome'
+      outcome: 'Accepted: Joined As Host' | 'Accepted: Joined as guest' |'Rejected: Lobby Not Found' | 'Rejected: Lobby is full'
+    }
+  
+    LobbySyncResponse: {
+      messageType: 'LobbySyncResponse'
+      hostCurrentState: HostCurrentState
+    }
 
-  type CreateLobby = {
-    type: 'CreateLobby'
-  }
-
-  type JoinLobby = {
-    type: 'JoinLobby'
-    lobbyId: string
-  }
-
-  type LobbyJoinOutcome = {
-    type: 'LobbyJoinOutcome'
-    outcome: 'Accepted'|'Rejected: Lobby Not Found' | 'Rejected: Lobby is full'
-  }
-
-  type LobbySync = {
-    type: 'LobbySync'
-    lobbyId: 'Accepted'|'Rejected: Lobby Not Found' | 'Rejected: Lobby is full'
-  }
-
-  type LobbyCreated = {
-    type: 'LobbyCreated'
-    lobbyId: string
-  }
-
-  type GetLobbyState = {
-    type: 'GetLobbyState'
-  }
-
-  type LobbyState = {
-    type: 'LobbyState'
-    lobbyState: {
-      isPlaying: boolean
+    HostLobbySyncResponse: {
+      messageType: 'HostLobbySyncResponse'
+      hostCurrentState: HostCurrentState
+    }
+  
+    RequestSync: {
+      messageType: 'RequestSync'
+    }
+  
+    LobbyCreated: {
+      messageType: 'LobbyCreated'
+      lobbyId: string
     }
   }
 
-  type ResumeInstructionFromServer = {
-    type: 'ResumeInstructionFromServer'
-  }
+  type WebSocketMessages = WebSocketMessagesObject[keyof WebSocketMessagesObject]
 
-  type WebSocketMessages = PauseVideoRequest | PlayVideoRequest | CreateLobby | JoinLobby | LobbyCreated | GetLobbyState | LobbyState | ResumeInstructionFromServer
+  type MessageEventFunction = (this: CommonWebSocket, context: Omit<MessageEvent<T>, 'eventFunction'>, ) => void
 
   type MessageEvent<T extends WebSocketMessages> = T & {
-    eventFunction: (context: Omit<MessageEvent<T>, 'eventFunction'>, self: import('ws').WebSocket) => void
-    eventName: `${T['type']}`
+    eventFunction: MessageEventFunction | MessageEventFunction[]
+    eventName: `${T['messageType']}`
   }
 
-  type PauseVideoRequestEvent =  MessageEvent<PauseVideoRequest>
-  type PlayVideoRequestEvent =  MessageEvent<PlayVideoRequest>
-  type CreateLobbyEvent =  MessageEvent<CreateLobby>
-  type JoinLobbyEvent =  MessageEvent<JoinLobby>
-  type LobbyJoinOutcomeEvent =  MessageEvent<LobbyJoinOutcome>
-  type LobbySyncEvent =  MessageEvent<LobbySync>
-  type LobbyCreatedEvent =  MessageEvent<LobbyCreated>
-  type GetLobbyStateEvent =  MessageEvent<GetLobbyState>
-  type LobbyStateEvent =  MessageEvent<LobbyState>
-  type ResumeInstructionFromServerEvent =  MessageEvent<ResumeInstructionFromServer>
+  type WebSocketMessageEventsObject = {[key in WebSocketMessages as `${key['messageType']}Event` ]: MessageEvent<key> }
 
-  type WebSocketMessageEvents = PauseVideoRequestEvent | PlayVideoRequestEvent | CreateLobbyEvent | JoinLobbyEvent | LobbyJoinOutcomeEvent | LobbySyncEvent | LobbyCreatedEvent | GetLobbyStateEvent | LobbyStateEvent | ResumeInstructionFromServerEvent
+  type WebSocketMessageEvents = WebSocketMessageEventsObject[keyof WebSocketMessageEventsObject]
 
   type NetworkTypesProof = {
-    [key in WebSocketMessages as `${key['type']}`]: (data: unknown) => data is key
+    [key in WebSocketMessages as `${key['messageType']}`]: (data: unknown) => data is key
   } & {
     'WebSocketMessages':(data: unknown) => data is WebSocketMessages
   }
 
   type NetworkClientProfile = {
-    webSocket: WebSocket
+    webSocket: CommonWebSocket
     lobby: NetworkClientProfile[],
+  }
+
+  type HandleWebSocketEventObject = {
+    [key in NetworkTypes.WebSocketMessageEvents as key['eventName']]?: key['eventFunction']  
   }
 }
 
@@ -128,3 +121,5 @@ type GenerateVideoHandlerType = typeof import ('../VideoHandler.ts').GenerateVid
 type VideoControlsFunctionsType = ReturnType<GenerateVideoHandlerType>;
 
 type VideoControlOptions = keyof VideoControlsFunctionsType;
+
+type CommonWebSocket = import('ws').WebSocket | WebSocket
