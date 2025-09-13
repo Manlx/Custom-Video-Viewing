@@ -1,4 +1,4 @@
-import { VideoViewer } from "../VideoViewer";
+import { VideoViewer } from "./VideoViewer.tsx";
 
 const Video: React.FC<{
   params: Promise<{
