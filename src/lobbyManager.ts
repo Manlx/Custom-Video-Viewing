@@ -1,30 +1,17 @@
 import { WebSocket } from 'ws';
 import crypto from "crypto";
-import { NetworkTypesProofs } from './app/sharedTypes/proofs.ts';
+
+import { NetworkHandler } from './NetworkHandler.ts';
 
 export class LobbyManager{
 
-  static ConnectionHandler = () => {
-
-  }
-
   static Lobbies: {[key: string]: Lobby} = {}
 
-  static OnMessage: ((this: WebSocket, data: WebSocket.RawData, isBinary: boolean) => void) = function(data: WebSocket.RawData){
+  static AddNewConnection(newConnection: WebSocket){
 
-    const dataString = data.toString();
+    NetworkHandler.handleWebSocket(newConnection,{
 
-    if (!dataString) {
-
-      return;
-    }
-
-    try {
-
-      const dataObj = JSON.parse(dataString)
-
-      if (NetworkTypesProofs.CreateLobby(dataObj)) {
-
+      CreateLobby(){
         const lobbyId = crypto.randomUUID();
   
         LobbyManager.Lobbies[lobbyId] = new Lobby();
@@ -32,93 +19,86 @@ export class LobbyManager{
         LobbyManager.Lobbies[lobbyId].connectNew(this, true)
   
         this.send(JSON.stringify({
-          type: 'LobbyCreated',
+          messageType: 'LobbyCreated',
           lobbyId
-        } satisfies NetworkTypes.LobbyCreated))
+        } satisfies NetworkTypes.WebSocketMessagesObject['LobbyCreated']))
 
         return;
-      }
+      },
 
-      if (NetworkTypesProofs.JoinLobby(dataObj)) {
-
-        const lobby = LobbyManager.Lobbies[dataObj.lobbyId];
+      JoinLobby(this, context){
+        const lobby = LobbyManager.Lobbies[context.lobbyId];
 
         if (!lobby) {
 
           this.send(JSON.stringify({
             outcome: 'Rejected: Lobby Not Found',
-            type: 'LobbyJoinOutcome'
-          } satisfies NetworkTypes.LobbyJoinOutcome))
+            messageType: 'LobbyJoinOutcome'
+          } satisfies NetworkTypes.WebSocketMessagesObject['LobbyJoinOutcome']))
         }
+
+        lobby.connectNew(this, false)
       }
+    })
 
-
-    } catch (error) {
-     
-      console.log('LobbyManager failed parse json',error)
-    }
-  }
-
-  static AddNewConnection(newConnection: WebSocket){
-
-    newConnection.off('message', LobbyManager.OnMessage)
-    newConnection.on('message', LobbyManager.OnMessage)
   }
 }
 
 export class Lobby{
 
-  static ConnectionRemoverGenerator(lobby: Lobby): (this: WebSocket, code: number, reason: Buffer) => void {
+  static ConnectionRemoverGenerator(lobby: Lobby): (this: CommonWebSocket, code: number, reason: Buffer) => void {
 
     return function(){
 
       const removeIndex = lobby.connections.findIndex((connection) => connection === this)
 
       lobby.connections = lobby.connections.slice(0, removeIndex).concat(lobby.connections.slice(removeIndex + 1))
-
-      this.removeEventListener('message', lobby.messageHandler)
     }
   }
 
-  connections: WebSocket[] = [];
+  connections: CommonWebSocket[] = [];
 
-  lobbyLeader: WebSocket | undefined = undefined;
+  lobbyLeader: CommonWebSocket | undefined = undefined;
 
-  messageHandler: ((event: WebSocket.MessageEvent) => void) = function(messageEvent: WebSocket.MessageEvent) {
+  connectionDrop: (this: CommonWebSocket, code: number, reason: Buffer) => void = Lobby.ConnectionRemoverGenerator(this)
 
-    try {
-
-      const messageObject = JSON.parse(messageEvent.data.toString())
-      
-      if (NetworkTypesProofs.PauseVideoRequest(messageObject)){
-  
-        return;
-      }
-  
-      if (NetworkTypesProofs.PlayVideoRequest(messageObject)){
-  
-        return;
-      }
-    } catch (error) {
-      
-      console.error(error)
-    }
-
-  }
-
-  connectionDrop: (this: WebSocket, code: number, reason: Buffer) => void = Lobby.ConnectionRemoverGenerator(this)
-
-  connectNew(newConnection: WebSocket, isLobbyLeader: boolean) {
+  connectNew(newConnection: CommonWebSocket, isLobbyLeader: boolean) {
 
     this.connections.push(newConnection)
+
+    const lobby = this;
 
     if (isLobbyLeader) {
 
       this.lobbyLeader = newConnection;
+
+      NetworkHandler.handleWebSocket(newConnection, {
+
+        HostLobbySyncResponse(context) {
+
+          lobby.connections.forEach(clientCon => {
+            clientCon.send(JSON.stringify({
+              hostCurrentState: context.hostCurrentState,
+              messageType: 'LobbySyncResponse'
+            } satisfies NetworkTypes.WebSocketMessagesObject['LobbySyncResponse']))
+          })
+        }        
+      })
+
+      return
     }
 
-    newConnection.addEventListener('message', this.messageHandler)
+    NetworkHandler.handleWebSocket(newConnection, {
+      RequestSync(){
+        lobby.lobbyLeader?.send(JSON.stringify({
+          messageType:'RequestSync'
+        } satisfies NetworkTypes.WebSocketMessagesObject['RequestSync']))
+      }
+    })
 
-    newConnection.on('close', this.connectionDrop)
+    lobby.lobbyLeader?.send(JSON.stringify({
+      messageType:'RequestSync'
+    } satisfies NetworkTypes.WebSocketMessagesObject['RequestSync']))
+
   }
 }
