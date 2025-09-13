@@ -1,10 +1,8 @@
 "use client"
 
-import React, { useEffect, useRef, useState } from "react"
-import { useWebSocket } from "./hooks/useWebSocket"
-import { Config } from "./../config.ts"
-import { NetworkTypesProofs } from "./sharedTypes/proofs"
+import React, { useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from 'next/navigation';
+import { WebSocketContext } from "./Providers.tsx"
 
 // ToDo network sided buttons for host.
 // const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
@@ -28,51 +26,62 @@ export const VideoViewer: React.FC<{
   videoName
 }) => {
 
+  const webSocketContext = useContext(WebSocketContext);
+
   const router = useRouter()
 
   const videoRef = useRef<HTMLVideoElement | null>(null)
-
-  const [socketURL,setSocketURL] = useState('')
 
   const [lobbyId,setLobbyId] = useState('')
 
   useEffect(()=>{
 
-    setSocketURL(`ws://${window.location.hostname}:${Config.WebSocketServerPort}`)
-  },[])
+    webSocketContext.setWebSocketEvents(prevEvents => ({
+      ...prevEvents,
+      LobbyCreated(context){
 
-  const [
-    webSocket,
-    socketData,
-    resetSocket,
-    socketState
-  ] = useWebSocket(socketURL)
+        setLobbyId(context.lobbyId)
+      },
+      RequestSync(context){
 
-  console.log(webSocket)
+        if (!videoRef.current){
 
-  useEffect(()=>{
+          return;
+        }
 
-    if (!socketData) {
+        this.send(JSON.stringify({
+          messageType: 'HostLobbySyncResponse',
+          hostCurrentState: {
+            currentVideoTime: videoRef.current.currentTime ?? 0,
+            currentSrc: videoRef.current.currentSrc,
+            paused: videoRef.current.paused,
+            playBackSpeed: videoRef.current.playbackRate
+          }
+        } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
+      },
+      LobbySyncResponse(context){
 
-      return;
-    }
+        console.log(context)
 
-    try {
-      const wsObject = JSON.parse(socketData)
+        if (!videoRef.current){
 
-      if (NetworkTypesProofs.LobbyCreated(wsObject)){
+          return;
+        }
 
-        setLobbyId(wsObject.lobbyId)
+        videoRef.current.currentTime = context.hostCurrentState.currentVideoTime
+        videoRef.current.src = context.hostCurrentState.currentSrc
+        videoRef.current.playbackRate = context.hostCurrentState.playBackSpeed
+
+        if (context.hostCurrentState.paused) {
+
+          videoRef.current.pause()
+        }
+        else {
+          videoRef.current.play()
+        }
       }
-
-    } catch (error) {
-      
-      console.error(error)
-    }
-
-  },[
-    socketData
-  ])
+    }))
+  },[])
 
   return (
     <div
@@ -123,14 +132,15 @@ export const VideoViewer: React.FC<{
       <span>
 
         <button
+          disabled={webSocketContext.webSocketRes.socketState === 'Closed'}
           onClick={()=>{
 
-            webSocket?.send(JSON.stringify({
-              type: 'CreateLobby'
-            } satisfies NetworkTypes.CreateLobby))
+            webSocketContext.webSocketRes.webSocket?.send(JSON.stringify({
+              messageType: 'CreateLobby'
+            } satisfies NetworkTypes.WebSocketMessagesObject['CreateLobby']))
           }}>Request Lobby Creation</button>
 
-        <button
+        {/* <button
           onClick={()=>{
 
             const lobbyId = prompt('Lobby Id: ')
@@ -142,23 +152,21 @@ export const VideoViewer: React.FC<{
               return;
             }
             webSocket?.send(JSON.stringify({
-              type: 'JoinLobby',
+              messageType: 'JoinLobby',
               lobbyId: lobbyId
-            } satisfies NetworkTypes.JoinLobby))
-          }}>Request Join Lobby</button>
+            } satisfies NetworkTypes.WebSocketMessagesObject['JoinLobby']))
+          }}>Request Join Lobby</button> */}
       </span>
 
-      <p>socketData: {socketData}</p>
-
-      { socketState === 'Closed' &&
+      { webSocketContext.webSocketRes.socketState === 'Closed' &&
 
         <button
           onClick={()=>{
 
-            resetSocket()
+            webSocketContext.webSocketRes.resetSocket()
           }}>Reconnect</button>
       }
-      <p>Socket State: {socketState}</p>
+      <p>Socket State: {webSocketContext.webSocketRes.socketState}</p>
     </div>
   )
 }
