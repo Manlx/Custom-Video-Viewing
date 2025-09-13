@@ -1,6 +1,7 @@
 "use client"
-import { useEffect, useState } from "react";
+import { useContext, useEffect, useState } from "react";
 import { useRouter,useSearchParams  } from 'next/navigation';
+import { WebSocketContext } from "./Providers";
 
 type VideoPaginatorProps = {
   pages: {
@@ -54,15 +55,12 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
 
   const [currentSubPage, setCurrentSubPage] = useState(() => isNaN(currentSubPageQueryParam) ? 0 : currentSubPageQueryParam);
   
-  // const [paginationSize, setPaginationSize] = useState(() => isNaN(paginationSizeQueryParam) ? 4 : paginationSizeQueryParam);
 
   const [currentVideos, setCurrentVideos] = useState<string[]>([]);
   
-  // const [currentTabIndex, setCurrentTabIndex] = useState(0)
-
-  // const [currentSubPage, setCurrentSubPage] = useState(0);
-
   const [paginationSize, setPaginationSize] = useState(paginationSizeInitial);
+
+  const webSocketContext = useContext(WebSocketContext);
 
   useEffect(()=>{
     router.push(`/?currentTabIndex=${currentTabIndex}&currentSubPage=${currentSubPage}`)
@@ -134,6 +132,35 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
             min={3}
             max={12}/>
         </select>
+
+        { webSocketContext.webSocketRes.socketState === 'Closed' &&
+
+          <button
+            onClick={()=>{
+
+              webSocketContext.webSocketRes.resetSocket()
+            }}>Reconnect</button>
+        }
+        
+        <button
+          disabled={webSocketContext.webSocketRes.socketState === 'Closed'}
+          onClick={()=>{
+
+            const lobbyId = prompt('Lobby Id: ')
+
+            if (!lobbyId) {
+
+              alert('No lobby id provided')
+              
+              return;
+            }
+            webSocketContext.webSocketRes.webSocket?.send(JSON.stringify({
+              messageType: 'JoinLobby',
+              lobbyId: lobbyId
+            } satisfies NetworkTypes.WebSocketMessagesObject['JoinLobby']))
+          }}>
+          Request Join Lobby
+        </button>
       </div>
       <div style={{
         display: 'flex',
