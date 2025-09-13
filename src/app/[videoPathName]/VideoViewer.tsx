@@ -2,7 +2,8 @@
 
 import React, { useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from 'next/navigation';
-import { WebSocketContext } from "./Providers.tsx"
+import { WebSocketContext } from "../Providers.tsx"
+import { ReconnectButton } from "../ReconnectButton.tsx";
 
 // ToDo network sided buttons for host.
 // const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
@@ -58,30 +59,25 @@ export const VideoViewer: React.FC<{
             playBackSpeed: videoRef.current.playbackRate
           }
         } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
-      },
-      LobbySyncResponse(context){
-
-        console.log(context)
-
-        if (!videoRef.current){
-
-          return;
-        }
-
-        videoRef.current.currentTime = context.hostCurrentState.currentVideoTime
-        videoRef.current.src = context.hostCurrentState.currentSrc
-        videoRef.current.playbackRate = context.hostCurrentState.playBackSpeed
-
-        if (context.hostCurrentState.paused) {
-
-          videoRef.current.pause()
-        }
-        else {
-          videoRef.current.play()
-        }
       }
     }))
   },[])
+
+  const runSyncEvent = () => {
+    if (!videoRef.current || !webSocketContext.webSocketRes.webSocket){
+      return;
+    }
+
+    webSocketContext.webSocketRes.webSocket.send(JSON.stringify({
+      messageType: 'HostLobbySyncResponse',
+      hostCurrentState: {
+        currentVideoTime: videoRef.current.currentTime ?? 0,
+        currentSrc: videoRef.current.currentSrc,
+        paused: videoRef.current.paused,
+        playBackSpeed: videoRef.current.playbackRate
+      }
+    } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
+  }
 
   return (
     <div
@@ -105,10 +101,15 @@ export const VideoViewer: React.FC<{
          onClick={() => router.back()}>Back</h1>
         <h1
           style={linkStyle}
-         onClick={() => router.push('/')}>Home</h1>
+          onClick={() => router.push('/')}>Home</h1>
         <p>Lobby Id: {lobbyId}</p>
       </div>
       <video
+        // onClick={runSyncEvent}
+        onPlay={runSyncEvent}
+        onPause={runSyncEvent}
+        onSeeked={runSyncEvent}
+        onRateChange={runSyncEvent}
         controls
         ref={videoRef}
         style={{
@@ -138,17 +139,12 @@ export const VideoViewer: React.FC<{
             webSocketContext.webSocketRes.webSocket?.send(JSON.stringify({
               messageType: 'CreateLobby'
             } satisfies NetworkTypes.WebSocketMessagesObject['CreateLobby']))
-          }}>Request Lobby Creation</button>
+          }}>
+          Request Lobby Creation
+        </button>
       </span>
 
-      { webSocketContext.webSocketRes.socketState === 'Closed' &&
-
-        <button
-          onClick={()=>{
-
-            webSocketContext.webSocketRes.resetSocket()
-          }}>Reconnect</button>
-      }
+      <ReconnectButton></ReconnectButton>
       <p>Socket State: {webSocketContext.webSocketRes.socketState}</p>
     </div>
   )
