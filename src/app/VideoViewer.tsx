@@ -139,23 +139,6 @@ export const VideoViewer: React.FC<{
               messageType: 'CreateLobby'
             } satisfies NetworkTypes.WebSocketMessagesObject['CreateLobby']))
           }}>Request Lobby Creation</button>
-
-        {/* <button
-          onClick={()=>{
-
-            const lobbyId = prompt('Lobby Id: ')
-
-            if (!lobbyId) {
-
-              alert('No lobby id provided')
-              
-              return;
-            }
-            webSocket?.send(JSON.stringify({
-              messageType: 'JoinLobby',
-              lobbyId: lobbyId
-            } satisfies NetworkTypes.WebSocketMessagesObject['JoinLobby']))
-          }}>Request Join Lobby</button> */}
       </span>
 
       { webSocketContext.webSocketRes.socketState === 'Closed' &&
