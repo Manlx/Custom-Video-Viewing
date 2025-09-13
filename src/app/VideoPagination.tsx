@@ -2,6 +2,7 @@
 import { useContext, useEffect, useState } from "react";
 import { useRouter,useSearchParams  } from 'next/navigation';
 import { WebSocketContext } from "./Providers";
+import { ReconnectButton } from "./ReconnectButton";
 
 type VideoPaginatorProps = {
   pages: {
@@ -133,14 +134,7 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
             max={12}/>
         </select>
 
-        { webSocketContext.webSocketRes.socketState === 'Closed' &&
-
-          <button
-            onClick={()=>{
-
-              webSocketContext.webSocketRes.resetSocket()
-            }}>Reconnect</button>
-        }
+        <ReconnectButton></ReconnectButton>
         
         <button
           disabled={webSocketContext.webSocketRes.socketState === 'Closed'}
@@ -154,10 +148,8 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
               
               return;
             }
-            webSocketContext.webSocketRes.webSocket?.send(JSON.stringify({
-              messageType: 'JoinLobby',
-              lobbyId: lobbyId
-            } satisfies NetworkTypes.WebSocketMessagesObject['JoinLobby']))
+
+            router.push(`/lobbyId?lobbyId=${lobbyId}`)
           }}>
           Request Join Lobby
         </button>
