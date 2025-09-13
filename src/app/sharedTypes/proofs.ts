@@ -67,34 +67,39 @@ const WebSocketMessageProof = ((data) => {
 }) as ((data: unknown) => data is NetworkTypes.WebSocketMessages)
 
 export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
-  PauseVideoRequest: GenerateObjectTypeProof<NetworkTypes.PauseVideoRequest>({
-    type: 'string',
+  CreateLobby: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['CreateLobby']>({
+    messageType: 'string',
   }),
-  PlayVideoRequest: GenerateObjectTypeProof<NetworkTypes.PlayVideoRequest>({
-    type: 'string',
-  }),
-  CreateLobby: GenerateObjectTypeProof<NetworkTypes.CreateLobby>({
-    type: 'string',
-  }),
-  ResumeInstructionFromServer: GenerateObjectTypeProof<NetworkTypes.ResumeInstructionFromServer>({
-    type: 'string'
-  }),
-  LobbyCreated: GenerateObjectTypeProof<NetworkTypes.LobbyCreated>({
-    type: 'string',
+  LobbyCreated: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbyCreated']>({
+    messageType: 'string',
     lobbyId: 'string'
   }),
-  LobbyState: GenerateObjectTypeProof<NetworkTypes.LobbyState>({
-    type: 'string',
-      lobbyState: {
-        isPlaying: 'boolean'
+  JoinLobby: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['JoinLobby']>({
+    lobbyId: 'string',
+    messageType: 'string'
+  }),
+  LobbyJoinOutcome: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbyJoinOutcome']>({
+    outcome: 'string',
+    messageType: 'string'
+  }),
+  LobbySyncResponse: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbySyncResponse']>({
+    messageType: 'string',
+    hostCurrentState: {
+      currentVideoTime: 'number',
+      isPlaying: 'boolean',
+      playBackSpeed: 'number'
     }
   }),
-  JoinLobby: GenerateObjectTypeProof<NetworkTypes.JoinLobby>({
-    lobbyId: 'string',
-    type: 'string'
+  RequestSync: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['RequestSync']>({
+    messageType: 'string'
   }),
-  GetLobbyState: GenerateObjectTypeProof<NetworkTypes.GetLobbyState>({
-    type: 'string'
+  HostLobbySyncResponse: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']>({
+    hostCurrentState: {
+      currentVideoTime: 'number',
+      isPlaying: 'boolean',
+      playBackSpeed: 'number'
+    },
+    messageType: 'string'
   }),
   WebSocketMessages: WebSocketMessageProof
 }
