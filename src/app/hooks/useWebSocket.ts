@@ -24,40 +24,30 @@ function isValidWebSocketUrl(url: string) {
 
 export const useWebSocket = (socketURL: string, events: NetworkTypes.HandleWebSocketEventObject): useWebSocketReturn => {
 
-  const [websocket, setWebSocket] = useState<WebSocket | null>(() => {
-
-    if (isValidWebSocketUrl(socketURL)){
-
-      return new WebSocket(socketURL)
-    }
-
-    return null
-
-  });
-
-  const [selfState, setSelfState] = useState<useWebSocketReturn>({
-    webSocket: websocket,
+  const [selfState, setSelfState] = useState<useWebSocketReturn>(() => ({
+    webSocket: isValidWebSocketUrl(socketURL) ? new WebSocket(socketURL) : null,
     resetSocket: () => {
 
-      setWebSocket(new WebSocket(socketURL))
+      setSelfState(prev => ({...prev, webSocket: new WebSocket(socketURL)}))
     },
     socketState: 'Closed'
-  }) 
+  })) 
 
   useEffect(()=>{
     setSelfState(prev => ({...prev, resetSocket: () => {
-      setWebSocket(new WebSocket(socketURL))
+
+      setSelfState(prev => ({...prev, webSocket: new WebSocket(socketURL)}))
     }}))
   },[socketURL])
 
   useEffect(()=>{
 
-    if (!websocket){
+    if (!selfState.webSocket){
 
       return;
     }
     
-    const webSocketCleanup = NetworkHandler.handleWebSocket(websocket, events)
+    const webSocketCleanup = NetworkHandler.handleWebSocket(selfState.webSocket, events)
 
     const onClose: (this: WebSocket, ev: CloseEvent) => void = function (){
     
@@ -69,13 +59,18 @@ export const useWebSocket = (socketURL: string, events: NetworkTypes.HandleWebSo
       setSelfState(prev => ({...prev, socketState: 'Open'}))
     }
     
-      websocket.addEventListener('close', onClose)
-      websocket.addEventListener('open', onOpen)
+      selfState.webSocket.addEventListener('close', onClose)
+      selfState.webSocket.addEventListener('open', onOpen)
 
     return () => {
 
-      websocket.removeEventListener('close', onClose)
-      websocket.removeEventListener('open', onOpen)
+      if (!selfState.webSocket){
+
+        return;
+      }
+
+      selfState.webSocket.removeEventListener('close', onClose)
+      selfState.webSocket.removeEventListener('open', onOpen)
 
       if (webSocketCleanup){
         
@@ -83,7 +78,7 @@ export const useWebSocket = (socketURL: string, events: NetworkTypes.HandleWebSo
       }
     }
   },[
-    websocket,
+    selfState.webSocket,
     events
   ])
 
