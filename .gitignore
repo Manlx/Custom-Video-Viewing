@@ -48,3 +48,4 @@ videos/*
 public/_next-video
 
 public/*
+replay_cache/*
