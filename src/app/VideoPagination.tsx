@@ -5,10 +5,6 @@ import { WebSocketContext } from "./Providers";
 import { ReconnectButton } from "./ReconnectButton";
 
 type VideoPaginatorProps = {
-  pages: {
-    pageName: string,
-    videos: string[]
-  }[],
   paginationSize?: number
 }
 
@@ -39,7 +35,6 @@ const PaginationSizingOptions: React.FC<{
 }
 
 export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
-  pages,
   paginationSize: paginationSizeInitial = 6
 }) => {
 
@@ -52,27 +47,30 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
     currentSubPageQueryParam = Number(searchParams.get('currentSubPage'))
     // paginationSizeQueryParam = Number(searchParams.get('paginationSize'))
 
-  const [currentTabIndex, setCurrentTabIndex] = useState(() => isNaN (currentTabIndexQueryParam)?  0 : currentTabIndexQueryParam)
+  const [currentPage, setCurrentPage] = useState(() => isNaN (currentTabIndexQueryParam)?  0 : currentTabIndexQueryParam)
 
   const [currentSubPage, setCurrentSubPage] = useState(() => isNaN(currentSubPageQueryParam) ? 0 : currentSubPageQueryParam);
-  
 
-  const [currentVideos, setCurrentVideos] = useState<string[]>([]);
+  const [currentVideos, setCurrentVideos] = useState<PageAndVideos['videoSources']>([]);
   
   const [paginationSize, setPaginationSize] = useState(paginationSizeInitial);
 
   const webSocketContext = useContext(WebSocketContext);
 
   useEffect(()=>{
-    router.push(`/?currentTabIndex=${currentTabIndex}&currentSubPage=${currentSubPage}`)
-    setCurrentVideos(pages[currentTabIndex].videos.slice(currentSubPage * paginationSize, (currentSubPage + 1) * paginationSize ))
+    router.push(`/?currentTabIndex=${currentPage}&currentSubPage=${currentSubPage}`)
+    setCurrentVideos(webSocketContext.videoData[currentPage].videoSources.slice(currentSubPage * paginationSize, (currentSubPage + 1) * paginationSize ))
   },[
-    currentTabIndex,
+    currentPage,
     currentSubPage,
     paginationSize,
     // pages,
     // router
   ])
+
+  useEffect(()=>{
+    webSocketContext.setVideoData(webSocketContext.videoData)
+  },[])
 
   return (
     <div
@@ -97,10 +95,10 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
         }}>
         <label>Game: </label>
         <select
-          value={currentTabIndex}
-          onChange={ e => setCurrentTabIndex(Number(e.target.value)) }>
+          value={currentPage}
+          onChange={ e => setCurrentPage(Number(e.target.value)) }>
           
-          { pages.map((page, index) => (
+          { webSocketContext.videoData.map((page, index) => (
 
               <option 
                 key={page.pageName} 
@@ -120,7 +118,7 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
 
           <PaginationSizingOptions 
             min={1}
-            max={Math.ceil(pages[currentTabIndex].videos.length / paginationSize)}/>
+            max={Math.ceil(webSocketContext.videoData[currentPage].videoSources.length / paginationSize)}/>
         </select>
 
         <label> Number per page: </label>
@@ -166,16 +164,16 @@ export const VideoPaginator: React.FC<VideoPaginatorProps> = ({
         <div
           className="videoContainer">
           {
-            currentVideos.map(video => (
+            currentVideos.map((video, index) => (
 
               <video 
                 className="videoFromPicker"
-                key={video} 
+                key={video.track} 
                 // controls 
-                onClick={()=>{ router.push(encodeURIComponent(`${video}.watchTogether`)) }}
+                onClick={()=>{ router.push(`/${currentPage}/${currentSubPage * paginationSize + index}`) }}
                 width={"100%"} 
                 preload={"metadata"}>
-                <source src={video}></source>
+                <source src={video.track}></source>
               </video>
             ))
           }
