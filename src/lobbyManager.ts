@@ -66,6 +66,7 @@ export class Lobby{
 
     this.connections.push(newConnection)
 
+    // eslint-disable-next-line @typescript-eslint/no-this-alias
     const lobby = this;
 
     if (isLobbyLeader) {
