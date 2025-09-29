@@ -11,7 +11,7 @@ export class NetworkHandler {
    */
   static handleWebSocket (newSocket: WebSocketServerConnection | WebSocket, events: NetworkTypes.HandleWebSocketEventObject): (()=>void) | undefined {
 
-    const onMessage: ((this: WebSocket, ev: MessageEvent<string>) => any) & ((event: WebSocketServerConnection.MessageEvent) => void) = (event) => {
+    const onMessage: ((this: WebSocket, ev: MessageEvent<string>) => void) & ((event: WebSocketServerConnection.MessageEvent) => void) = (event) => {
       
       const eventData = event.data.toString()
 
