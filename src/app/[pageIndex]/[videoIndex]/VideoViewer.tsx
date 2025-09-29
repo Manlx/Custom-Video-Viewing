@@ -2,8 +2,8 @@
 
 import React, { useContext, useEffect, useRef, useState } from "react"
 import { useRouter } from 'next/navigation';
-import { WebSocketContext } from "../Providers.tsx"
-import { ReconnectButton } from "../ReconnectButton.tsx";
+import { WebSocketContext } from "../../Providers.tsx"
+import { ReconnectButton } from "../../ReconnectButton.tsx";
 
 // ToDo network sided buttons for host.
 // const controls: VideoControlOptions[] = ['PauseVideo','TogglePlay', 'PlayVideo','Reset', 'ReverseSeconds30S', 'ReverseSeconds15S','ReverseSeconds5S','SkipForwardSeconds5S', 'SkipForwardSeconds15S','SkipForwardSeconds30S']
@@ -19,15 +19,20 @@ const linkStyle: React.CSSProperties = {
   caretColor: 'transparent'
 }
 
+let debounceId: NodeJS.Timeout | undefined = undefined;
+
 export const VideoViewer: React.FC<{
-  folder: string, 
-  videoName: string
+  pageIndex: number,
+  videoIndex: number
 }> = ({
-  folder,
-  videoName
+  pageIndex,
+  videoIndex
 }) => {
 
+  
   const webSocketContext = useContext(WebSocketContext);
+
+  console.log(webSocketContext.videoData[pageIndex].videoSources[videoIndex].track)
 
   const router = useRouter()
 
@@ -43,40 +48,39 @@ export const VideoViewer: React.FC<{
 
         setLobbyId(context.lobbyId)
       },
-      RequestSync(context){
+      RequestSync(){
 
-        if (!videoRef.current){
-
-          return;
-        }
-
-        this.send(JSON.stringify({
-          messageType: 'HostLobbySyncResponse',
-          hostCurrentState: {
-            currentVideoTime: videoRef.current.currentTime ?? 0,
-            currentSrc: videoRef.current.currentSrc,
-            paused: videoRef.current.paused,
-            playBackSpeed: videoRef.current.playbackRate
-          }
-        } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
+        runSyncEvent()
       }
     }))
   },[])
 
   const runSyncEvent = () => {
-    if (!videoRef.current || !webSocketContext.webSocketRes.webSocket){
-      return;
+
+    if (!!debounceId){
+
+      clearTimeout(debounceId)
     }
 
-    webSocketContext.webSocketRes.webSocket.send(JSON.stringify({
-      messageType: 'HostLobbySyncResponse',
-      hostCurrentState: {
-        currentVideoTime: videoRef.current.currentTime ?? 0,
-        currentSrc: videoRef.current.currentSrc,
-        paused: videoRef.current.paused,
-        playBackSpeed: videoRef.current.playbackRate
+    debounceId = setTimeout(() => {
+
+      if (!videoRef.current || !webSocketContext.webSocketRes.webSocket){
+        return;
       }
-    } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
+      
+      webSocketContext.webSocketRes.webSocket.send(JSON.stringify({
+        messageType: 'HostLobbySyncResponse',
+        hostCurrentState: {
+          currentVideoTime: videoRef.current.currentTime ?? 0,
+          currentSrc: videoRef.current.currentSrc,
+          paused: videoRef.current.paused,
+          playBackSpeed: videoRef.current.playbackRate,
+          textTrackList: videoRef.current.textTracks
+        }
+      } satisfies NetworkTypes.WebSocketMessagesObject['HostLobbySyncResponse']))
+
+      debounceId = undefined;
+    }, 200);
   }
 
   return (
@@ -115,14 +119,23 @@ export const VideoViewer: React.FC<{
         style={{
           height: '70vh',
           width: 'auto',
-          borderRadius: '3rem'
         }}
         width={"100%"} 
         preload={"auto"}>
 
-        <source 
-          src={`${folder}/${videoName}`} 
-          type="video/mp4"/>
+        { !!webSocketContext.videoData[pageIndex] &&
+          <>
+            <source 
+              src={`/${webSocketContext.videoData[pageIndex].videoSources[videoIndex].track}`} 
+              type="video/mp4"/>
+
+            { !!webSocketContext.videoData[pageIndex].videoSources[videoIndex].subtitles &&
+
+              <track src={`/${webSocketContext.videoData[pageIndex].videoSources[videoIndex].subtitles}`} kind="subtitles" srcLang="en" label="English" />
+            }
+          </>
+
+        }
           
       </video>
 
