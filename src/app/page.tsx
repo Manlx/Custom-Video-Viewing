@@ -1,15 +1,11 @@
-import { GetPagesAndVideos } from "@/helpers";
 import { VideoPaginator } from "./VideoPagination";
 import { Suspense } from "react";
-import { Config } from "@/config";
-
-const pages = GetPagesAndVideos(Config.PublicFolderPath)
 
 export default function Video() {
   return (
     <Suspense fallback={<div>Loading search results...</div>}>
 
-      <VideoPaginator pages={pages}></VideoPaginator>
+      <VideoPaginator></VideoPaginator>
     </Suspense>
   )
 }
