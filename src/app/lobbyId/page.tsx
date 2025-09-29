@@ -1,6 +1,7 @@
 'use client'
 import { useRouter, useSearchParams } from "next/navigation";
 import { VideoViewerGuest } from "./VideoViewerGuest.tsx";
+import { Suspense } from "react";
 
 const Video: React.FC =  () => {
 
@@ -16,8 +17,12 @@ const Video: React.FC =  () => {
   }
 
   return (
-    <VideoViewerGuest
-      lobbyId={lobbyId}/>
+
+    <Suspense fallback={<div>Loading search results...</div>}>
+
+      <VideoViewerGuest
+        lobbyId={lobbyId}/>
+    </Suspense>
   )
 }
 
