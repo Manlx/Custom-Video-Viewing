@@ -35,6 +35,30 @@ export const GenerateObjectTypeProof = <ProvenType extends RecursiveObject> (exa
       const currentKey: number | string = keys[i];
       const keyValueType = exampleObject[currentKey];
 
+      if (Array.isArray(keyValueType)){
+
+        const [
+          typeName,
+          literalValue
+        ] = keyValueType
+        if (typeof typeName === 'undefined' || typeof literalValue === 'undefined') {
+
+          return false;
+        }
+
+        if (
+          !(currentKey in data) ||
+          (
+            typeof (data as ProvenType)[currentKey] !== typeName as typeOfReturn &&
+            typeof (data as ProvenType)[currentKey] !== 'object'
+          ) || 
+          ( (data as ProvenType)[currentKey] !== literalValue )
+        ){
+
+          return false;
+        }
+      }
+
       if (
         !(currentKey in data) ||
         (
@@ -68,19 +92,24 @@ const WebSocketMessageProof = ((data) => {
 
 export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
   CreateLobby: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['CreateLobby']>({
-    messageType: 'string',
+    messageType: ['string', 'CreateLobby'],
   }),
   LobbyCreated: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbyCreated']>({
-    messageType: 'string',
+    messageType: ['string','LobbyCreated'],
     lobbyId: 'string'
   }),
   JoinLobby: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['JoinLobby']>({
     lobbyId: 'string',
-    messageType: 'string'
+    messageType: ['string', 'JoinLobby']
   }),
   LobbyJoinOutcome: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbyJoinOutcome']>({
-    outcome: 'string',
-    messageType: 'string'
+    messageType: ["string", "LobbyJoinOutcome"],
+    outcome: [
+      ['string','Accepted: Joined As Host'],
+      ['string','Accepted: Joined as guest'],
+      ['string','Rejected: Lobby Not Found'],
+      ['string','Rejected: Lobby is full']
+    ]
   }),
   LobbySyncResponse: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['LobbySyncResponse']>({
     messageType: 'string',
@@ -88,7 +117,8 @@ export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
       currentVideoTime: 'number',
       paused: 'boolean',
       playBackSpeed: 'number',
-      currentSrc: 'string'
+
+      // currentSrc: 'string'
     }
   }),
   RequestSync: GenerateObjectTypeProof<NetworkTypes.WebSocketMessagesObject['RequestSync']>({
@@ -99,7 +129,8 @@ export const NetworkTypesProofs: NetworkTypes.NetworkTypesProof = {
       currentVideoTime: 'number',
       paused: 'boolean',
       currentSrc: 'string',
-      playBackSpeed: 'number'
+      playBackSpeed: 'number',
+
     },
     messageType: 'string'
   }),
