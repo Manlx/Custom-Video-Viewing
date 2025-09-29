@@ -1,50 +1,59 @@
 "use client"
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useEffect, useState } from 'react';
 
-import { useWebSocket, type useWebSocketReturn } from './hooks/useWebSocket.ts';
+import { useWebSocket } from './hooks/useWebSocket.ts';
 import { Config } from './../config.ts';
 
-export const WebSocketContext = createContext<{
-  webSocketEvents: NetworkTypes.HandleWebSocketEventObject;
-  setWebSocketEvents: React.Dispatch<React.SetStateAction<NetworkTypes.HandleWebSocketEventObject>>;
-  webSocketRes: useWebSocketReturn;
-}>({
+export const WebSocketContext = createContext<WebSocketContextType>({
   webSocketEvents: {},
   setWebSocketEvents: ()=>{},
   webSocketRes: {
     webSocket: null,
     resetSocket: () => {},
     socketState: 'Closed'
-  }
+  },
+  videoData: [],
+  setVideoData: () => {}
 })
 
-export const Providers: React.FC<React.PropsWithChildren> = ({
-  children
+export const Providers: React.FC<React.PropsWithChildren<{
+  videoDataFromServer: PageAndVideos[]
+}>> = ({
+  children,
+  videoDataFromServer = []
 }) => {
 
   const [socketURL,setSocketURL] = useState('')
   
   const [webSocketEvents, setWebSocketEvents] = useState<NetworkTypes.HandleWebSocketEventObject>({})
   
+  const [videoData, setVideoData] = useState<PageAndVideos[]>(videoDataFromServer)
+  
   const webSocketRes = useWebSocket(socketURL, webSocketEvents)
 
-  const [contextState, setContextState] = useState({
+  const [contextState, setContextState] = useState<WebSocketContextType>({
     webSocketEvents,
     setWebSocketEvents,
     webSocketRes,
+    videoData: videoData,
+    setVideoData: setVideoData
   })
 
   useEffect(()=>{
     setContextState({
       setWebSocketEvents: setWebSocketEvents,
       webSocketEvents: webSocketEvents,
-      webSocketRes: webSocketRes
+      webSocketRes: webSocketRes,
+      videoData: videoData,
+      setVideoData: setVideoData
     })
   },[
     webSocketEvents,
     setWebSocketEvents,
-    webSocketRes
+    webSocketRes,
+    videoData,
+    setVideoData
   ])
   
   useEffect(()=>{
