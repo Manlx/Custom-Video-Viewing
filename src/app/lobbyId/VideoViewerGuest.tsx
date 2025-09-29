@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useContext, useEffect, useRef, useState } from "react"
+import React, { useContext, useEffect, useRef } from "react"
 import { useRouter } from 'next/navigation';
 import { WebSocketContext } from "./../Providers.tsx"
 import { ReconnectButton } from "./../ReconnectButton.tsx";
@@ -39,9 +39,26 @@ export const VideoViewerGuest: React.FC<{
           return;
         }
 
-        videoRef.current.src = context.hostCurrentState.currentSrc
-        videoRef.current.currentTime = context.hostCurrentState.currentVideoTime
-        videoRef.current.playbackRate = context.hostCurrentState.playBackSpeed
+        if (videoRef.current.src != context.hostCurrentState.currentSrc){
+
+          videoRef.current.src = context.hostCurrentState.currentSrc
+        }
+        
+        if (videoRef.current.currentTime != context.hostCurrentState.currentVideoTime){
+          
+          videoRef.current.currentTime = context.hostCurrentState.currentVideoTime
+        }
+        
+        if (videoRef.current.playbackRate != context.hostCurrentState.playBackSpeed) {
+
+          videoRef.current.playbackRate = context.hostCurrentState.playBackSpeed
+        }
+
+        // if (videoRef.current.textTracks != context.hostCurrentState.) {
+
+        //   videoRef.current.addTextTrack = context.hostCurrentState.text
+        // }
+        
 
         if (context.hostCurrentState.paused) {
 
@@ -90,14 +107,10 @@ export const VideoViewerGuest: React.FC<{
         style={{
           height: '70vh',
           width: 'auto',
-          borderRadius: '3rem'
         }}
         width={"100%"} 
         preload={"auto"}>
 
-        <source 
-          type="video/mp4"/>
-          
       </video>
 
       <ReconnectButton></ReconnectButton>
